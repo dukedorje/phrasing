@@ -5,13 +5,13 @@ module InlineHelper
 # Data model phrase
 # phrase(@record, :title, inverse: true, class: phrase-record-title)
 
-  def phrase(*args)
+  def phrase(*args, &renderer)
     if args[0].class == String or args[0].class == Symbol
       key, options = args[0].to_s, args[1]
-      phrasing_phrase(key,options || {})
+      phrasing_phrase(key,options || {}, &renderer)
     else
       record, field_name, options = args[0], args[1], args[2]
-      inline(record, field_name, options || {})
+      inline(record, field_name, options || {}, &renderer)
     end
   end
 
@@ -21,15 +21,21 @@ module InlineHelper
     klass = 'phrasable'
     klass += ' phrasable_on' if edit_mode_on?
     klass += ' inverse' if options[:inverse]
+    klass += ' no_inline_edit' if block_given?
     klass += options[:class] if options[:class]
 
     url = phrasing_polymorphic_url(record, field_name)
 
-    if options[:render_only]
-      t(key, options[:interpolation] || {}).html_safe
+    phrase = (record.send(field_name) || record.try(:key)).to_s.html_safe
+
+    if block_given?
+      content_tag(:span, { class: klass }) do
+        yield(phrase).html_safe
+      end +
+      link_to('edit', edit_phrasing_phrase_path(record))
     else
       content_tag(:span, { class: klass, contenteditable: edit_mode_on?, spellcheck: false,   "data-url" => url}) do
-        (record.send(field_name) || record.try(:key)).to_s.html_safe
+        phrase
       end
     end
   end
@@ -38,13 +44,13 @@ module InlineHelper
 
   private
 
-    def phrasing_phrase(key, options = {})
+    def phrasing_phrase(key, options = {}, &renderer)
       key = options[:scope] ? "#{options[:scope]}.#{key}" : key.to_s
       if can_edit_phrases?
         @record = PhrasingPhrase.where(key: key, locale: I18n.locale.to_s).first || PhrasingPhrase.search_i18n_and_create_phrase(key)
-        inline(@record, :value, options)
+        inline(@record, :value, options, &renderer)
       else
-        t(key, options[:interpolation] || {}).html_safe
+        t(key, options[:interpolation] || {})
         # options.try(:[], :interpolation) ? t(key, options[:interpolation]).html_safe : t(key).html_safe
       end
     end
