@@ -25,8 +25,12 @@ module InlineHelper
 
     url = phrasing_polymorphic_url(record, field_name)
 
-    content_tag(:span, { class: klass, contenteditable: edit_mode_on?, spellcheck: false,   "data-url" => url}) do
-      (record.send(field_name) || record.try(:key)).to_s.html_safe
+    if options[:render_only]
+      t(key, options[:interpolation] || {}).html_safe
+    else
+      content_tag(:span, { class: klass, contenteditable: edit_mode_on?, spellcheck: false,   "data-url" => url}) do
+        (record.send(field_name) || record.try(:key)).to_s.html_safe
+      end
     end
   end
 
@@ -40,7 +44,8 @@ module InlineHelper
         @record = PhrasingPhrase.where(key: key, locale: I18n.locale.to_s).first || PhrasingPhrase.search_i18n_and_create_phrase(key)
         inline(@record, :value, options)
       else
-        options.try(:[], :interpolation) ? t(key, options[:interpolation]).html_safe : t(key).html_safe
+        t(key, options[:interpolation] || {}).html_safe
+        # options.try(:[], :interpolation) ? t(key, options[:interpolation]).html_safe : t(key).html_safe
       end
     end
 
