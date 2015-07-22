@@ -50,8 +50,8 @@ module InlineHelper
         @record = PhrasingPhrase.where(key: key, locale: I18n.locale.to_s).first || PhrasingPhrase.search_i18n_and_create_phrase(key)
         inline(@record, :value, options, &renderer)
       else
-        phrase = t(key, options[:interpolation] || {}).html_safe
-        block_given? ? yield(phrase) : phrase
+        phrase = t(key, options[:interpolation] || {})
+        block_given? ? yield(phrase).html_safe : phrase.html_safe
         # options.try(:[], :interpolation) ? t(key, options[:interpolation]).html_safe : t(key).html_safe
       end
     end
